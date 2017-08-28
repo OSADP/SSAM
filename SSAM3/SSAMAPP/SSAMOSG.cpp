@@ -1373,41 +1373,44 @@ void SSAMOSG::DrawHeatMap(osg::ref_ptr<osg::Group> HeatRoot)
 	std::string name("HM_" + std::to_string(m_NLevels));
 	DrawQuad(m_BBL, m_BBR, m_BTL, m_BTR, HeatRoot, m_OSGIntervalColorVecs[m_NLevels], name);
 
-	// draw heat map
-	for (int i = m_Levels.size() - 1; i >= 0; --i)
+	if (m_DataPoints.size() > 1)
 	{
-		name = "HM_" + std::to_string(i);
-		LevelInfo* pLevel = &(m_Levels[i]);
-		std::vector<point>& cps = pLevel->m_CharPoints;
-		std::list<std::list<int> >& lineSegs = pLevel->m_LineSegs;
-		for (std::list<std::list<int> >::iterator it = lineSegs.begin();
-			it != lineSegs.end(); ++it)
+		// draw heat map
+		for (int i = m_Levels.size() - 1; i >= 0; --i)
 		{
-			std::vector<point> points;
-			for (std::list<int>::iterator pit = it->begin(); pit != it->end(); ++pit)
+			name = "HM_" + std::to_string(i);
+			LevelInfo* pLevel = &(m_Levels[i]);
+			std::vector<point>& cps = pLevel->m_CharPoints;
+			std::list<std::list<int> >& lineSegs = pLevel->m_LineSegs;
+			for (std::list<std::list<int> >::iterator it = lineSegs.begin();
+				it != lineSegs.end(); ++it)
 			{
-				points.push_back(cps[*pit]);
-				points.back().z += m_Delta * (m_NLevels - i);
-			}
-			
-			if (it->size() == 3)
-			{
-				DrawTri(points[0], points[1], points[2], HeatRoot, m_OSGIntervalColorVecs[i], name);
-			} else if (it->size() == 4)
-			{
-				DrawQuad(points[0], points[1], points[3], points[2], HeatRoot, m_OSGIntervalColorVecs[i], name);
-			} else if (it->size() >= 5)
-			{
-				points.push_back(points.front());
-				point p0 = CalcPolygonCentroid(points);
-				p0.z = points.front().z;
-
-				int nPoints = points.size();
-				for (int ip = 0; ip < nPoints-1; ++ip)
+				std::vector<point> points;
+				for (std::list<int>::iterator pit = it->begin(); pit != it->end(); ++pit)
 				{
-					point& p1 = points[ip];
-					point& p2 = points[ip+1];
-					DrawTri(p0, p1, p2, HeatRoot, m_OSGIntervalColorVecs[i], name);
+					points.push_back(cps[*pit]);
+					points.back().z += m_Delta * (m_NLevels - i);
+				}
+				
+				if (it->size() == 3)
+				{
+					DrawTri(points[0], points[1], points[2], HeatRoot, m_OSGIntervalColorVecs[i], name);
+				} else if (it->size() == 4)
+				{
+					DrawQuad(points[0], points[1], points[3], points[2], HeatRoot, m_OSGIntervalColorVecs[i], name);
+				} else if (it->size() >= 5)
+				{
+					points.push_back(points.front());
+					point p0 = CalcPolygonCentroid(points);
+					p0.z = points.front().z;
+
+					int nPoints = points.size();
+					for (int ip = 0; ip < nPoints-1; ++ip)
+					{
+						point& p1 = points[ip];
+						point& p2 = points[ip+1];
+						DrawTri(p0, p1, p2, HeatRoot, m_OSGIntervalColorVecs[i], name);
+					}
 				}
 			}
 		}
@@ -1444,49 +1447,52 @@ bool SSAMOSG::HasChPoint(double lv, int i1, int i2, point& p)
 void SSAMOSG::DrawContourMap(osg::ref_ptr<osg::Group> ContourRoot,
 								 osg::ref_ptr<osg::Group> HeatRoot)
 {
-	GenerateContourLines();
-
-	RemoveAllChildren(ContourRoot);
 	double zOffset = m_Delta * m_NLevels;
-	for (std::vector<LevelInfo>::iterator il = m_Levels.begin(); 
-			il != m_Levels.end(); ++il)
+	RemoveAllChildren(ContourRoot);
+	if (m_DataPoints.size() > 1)
 	{
-		////////////////// draw contour lines
-		for (std::list<std::list<int> >::iterator ils = il->m_LineSegs.begin(); 
-			ils != il->m_LineSegs.end(); ++ils)
+		GenerateContourLines();
+		for (std::vector<LevelInfo>::iterator il = m_Levels.begin(); 
+				il != m_Levels.end(); ++il)
 		{
-			int nPoints = ils->size();
-			int idx = 0;
-			for (std::list<int>::iterator ip1 = ils->begin(), ip2 = std::next(ip1); 
-				ip1 != ils->end() && ip2 != ils->end(); 
-				++ip1, ++ip2)
+			////////////////// draw contour lines
+			for (std::list<std::list<int> >::iterator ils = il->m_LineSegs.begin(); 
+				ils != il->m_LineSegs.end(); ++ils)
 			{
-				point p1 = il->m_CharPoints[*ip1];
-				p1.z += zOffset;
-				point p2 = il->m_CharPoints[*ip2];
-				p2.z += zOffset;
-				DrawACustomWidthLine(p1, p2, 
-					m_LineWidth * 10.0, m_HeightAbove, ContourRoot, il->m_ColorVec);
-				idx++;
-
-				if (idx == nPoints/2)
+				int nPoints = ils->size();
+				int idx = 0;
+				for (std::list<int>::iterator ip1 = ils->begin(), ip2 = std::next(ip1); 
+					ip1 != ils->end() && ip2 != ils->end(); 
+					++ip1, ++ip2)
 				{
-					point pos = il->m_CharPoints[*ip1];
-					pos.z += m_ThickNessofRoad + zOffset;
-					WriteText(std::to_string(int(il->m_Value)),  
-						pos, m_LineWidth * 100.0, m_TextColor, ContourRoot);
-				}
-			}
-			
-			// construct a closed polygon for open contour lines (which have points on outer boundary)
-			// remove the last point from the closed contour lines
-			if (!ils->empty() && ils->front() == ils->back())
-			{
-				ils->pop_back();
-			}
+					point p1 = il->m_CharPoints[*ip1];
+					p1.z += zOffset;
+					point p2 = il->m_CharPoints[*ip2];
+					p2.z += zOffset;
+					DrawACustomWidthLine(p1, p2, 
+						m_LineWidth * 10.0, m_HeightAbove, ContourRoot, il->m_ColorVec);
+					idx++;
 
+					if (idx == nPoints/2)
+					{
+						point pos = il->m_CharPoints[*ip1];
+						pos.z += m_ThickNessofRoad + zOffset;
+						WriteText(std::to_string(int(il->m_Value)),  
+							pos, m_LineWidth * 100.0, m_TextColor, ContourRoot);
+					}
+				}
+				
+				// construct a closed polygon for open contour lines (which have points on outer boundary)
+				// remove the last point from the closed contour lines
+				if (!ils->empty() && ils->front() == ils->back())
+				{
+					ils->pop_back();
+				}
+
+			}
 		}
 	}
+	
 	// add one more level as the lowest interval
 	point TBBL = m_BBL;
 	point TBBR = m_BBR;
