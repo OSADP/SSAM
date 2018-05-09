@@ -16,7 +16,11 @@ SSAM3: this folder contains the Visual Studio 2012 solution files for SSAM3, the
 
 SSAM3EXE: this folder contains two versions of SSAM3 executable files and dependency files. Please download SSAM3EXE.zip to obtain all files in this folder.
 
+SSAM3EXE_x86: this folder contains two versions of 32-bit SSAM3 executable files and dependency files. Please download SSAM3EXE_x86.zip to obtain all files in this folder.
+
 SSAM3Setup: this folder contains the installation package for SSAM3.
+
+SSAM3Setup_x86: this folder contains the installation package for 32-bit SSAM3.
 
 SSAMDLL: this folder contains the Visual Studio 2012 solution files for SSAMDLL and a console version of SSAM 3.0. The project in this folder can be used to integrate SSAM analysis engine into other applications. Please download SSAMDLL.zip to obtain all files in this folder.
 	bin: this folder is the output path for SSAMDLL DLL and SSAM executable files.
